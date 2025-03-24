@@ -1,0 +1,21 @@
+[package]
+name = "cube"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { version = "0.7", features = ["multipart", "macros"] }
+chrono = { version = "0.4", features = ["serde"] }
+dirs = "5.0"
+hyper = "1.1"
+hyper-util = { version = "0.1", features = ["tokio"] }
+local-ip-address = "0.5"
+tokio = { version = "1", features = ["full"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+multipart = "0.18"
+uuid = { version = "1", features = ["v4"] }
+rusqlite = { version = "0.30", features = ["bundled"] }
+sha2 = "0.10" 
