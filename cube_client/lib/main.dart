@@ -111,36 +111,52 @@ class _UploadPageState extends State<UploadPage> {
   }
 
   Future<void> uploadPhotos() async {
-    for (final asset in photos) {
+    for (int i = 0; i < photos.length; i++) {
+      final asset = photos[i];
       final file = await asset.originFile;
       if (file == null) continue;
 
-      final request = http.MultipartRequest('POST', Uri.parse('http://bruno-linux:8080/upload'));
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('http://bruno-linux:8080/upload'),
+      );
+
       request.files.add(await http.MultipartFile.fromPath('file', file.path));
       request.fields['modified_at'] = asset.modifiedDateTime.toUtc().toIso8601String();
       request.fields['updated_at'] = DateTime.now().toIso8601String();
+      request.fields['username'] = "bruno"; // se ainda for relevante
 
-      final response = await request.send();
-      if (response.statusCode == 200) {
-        final bytes = await file.readAsBytes();
-        final hash = sha256.convert(bytes).toString();
-        await db.update(
-          'uploads',
-          {'updated_at': DateTime.now().toIso8601String()},
-          where: 'sha = ?',
-          whereArgs: [hash],
-        );
+      try {
+        final response = await request.send();
+        if (response.statusCode == 200) {
+          final bytes = await file.readAsBytes();
+          final hash = sha256.convert(bytes).toString();
+
+          await db.update(
+            'uploads',
+            {'updated_at': DateTime.now().toIso8601String()},
+            where: 'sha = ?',
+            whereArgs: [hash],
+          );
+
+          print('✅ Enviada: ${file.path}');
+        } else {
+          print('❌ Falha ao enviar: ${file.path}, código ${response.statusCode}');
+        }
+      } catch (e) {
+        print('❌ Erro ao enviar ${file.path}: $e');
       }
     }
-
+    
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Upload finalizado!')),
+      const SnackBar(content: Text('Upload finalizado com sucesso!')),
     );
 
     setState(() {
       photos.clear();
     });
   }
+
 
   @override
   Widget build(BuildContext context) {

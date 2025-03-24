@@ -82,18 +82,10 @@ async fn upload_handler(
 ) -> String {
     let mut modified_at: Option<DateTime<Utc>> = None;
     let mut filename = None;
-    let mut file_bytes: Option<bytes::Bytes> = None;
+    let mut file_bytes = None;
     let mut username = "bruno".to_string();
 
-    while let Some(field_result) = multipart.next_field().await.transpose() {
-        let field = match field_result {
-            Ok(f) => f,
-            Err(err) => {
-                eprintln!("Erro ao ler multipart field: {:?}", err);
-                return "Erro ao processar campo do formulário.".to_string();
-            }
-        };
-
+    while let Some(field) = multipart.next_field().await.unwrap() {
         let name = field.name().unwrap_or("").to_string();
 
         match name.as_str() {
@@ -104,51 +96,37 @@ async fn upload_handler(
                         .ok()
                         .map(|dt| dt.with_timezone(&Utc));
                 }
-            }
+            },
             "file" => {
-                let original_filename = field.file_name().map(|f| f.to_string());
-
-                print!("original_filename: {:?}", original_filename);
-
-                let extension = if let Some(name) = &original_filename {
-                    PathBuf::from(name)
-                        .extension()
-                        .map(|ext| ext.to_string_lossy().to_string())
-                } else {
-                    None
-                };
-
-                let safe_filename = match extension {
-                    Some(ext) => format!("{}_upload.{}", Uuid::new_v4(), ext),
-                    None => format!("{}_upload", Uuid::new_v4()),
-                };
-
-                filename = Some(original_filename.unwrap_or(safe_filename));
+                filename = field
+                    .file_name()
+                    .map(|f| f.to_string())
+                    .or_else(|| Some(format!("{}_upload.jpg", Uuid::new_v4())));
 
                 match field.bytes().await {
                     Ok(bytes) => file_bytes = Some(bytes),
                     Err(err) => {
-                        eprintln!("Erro ao ler conteúdo do arquivo: {:?}", err);
-                        return "Falha ao ler o conteúdo do arquivo.".to_string();
+                        eprintln!("Erro ao ler arquivo: {:?}", err);
+                        return "Falha ao processar o arquivo enviado.".to_string();
                     }
                 }
-            }
+            },
             "username" => {
                 if let Ok(text) = field.text().await {
                     username = text;
                 }
-            }
+            },
             _ => {}
         }
     }
 
+    // Se não houver arquivo, retorna erro simples
     let data = match file_bytes {
         Some(data) => data,
         None => return "Nenhum arquivo enviado.".to_string(),
     };
 
-    let filename = filename.unwrap_or_else(|| format!("{}_upload", Uuid::new_v4()));
-
+    let filename = filename.unwrap();
     let mut hasher = Sha256::new();
     hasher.update(&data);
     let hash = format!("{:x}", hasher.finalize());
@@ -175,12 +153,12 @@ async fn upload_handler(
         let dir = base_path.join(&username).join(&year).join(&month);
         fs::create_dir_all(&dir).await.unwrap();
 
-        dir.join(&filename)
+        dir.join(&filename).to_string_lossy().to_string()
     } else {
         let dir = base_path.join(&username);
         fs::create_dir_all(&dir).await.unwrap();
 
-        dir.join(&filename)
+        dir.join(&filename).to_string_lossy().to_string()
     };
 
     println!("modified_at recebido: {:?}", modified_at);
@@ -193,8 +171,7 @@ async fn upload_handler(
     )
     .unwrap();
 
-    println!("Recebido e salvo: {}", path.to_string_lossy());
+    println!("Recebido e salvo: {}", path);
     "Upload finalizado!".to_string()
 }
-
 

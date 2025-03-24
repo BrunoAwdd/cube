@@ -308,6 +308,7 @@ name = "cube"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "bytes",
  "chrono",
  "dirs",
  "hyper 1.6.0",

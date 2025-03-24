@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 axum = { version = "0.7", features = ["multipart", "macros"] }
+bytes = "1.5"
 chrono = { version = "0.4", features = ["serde"] }
 dirs = "5.0"
 hyper = "1.1"
