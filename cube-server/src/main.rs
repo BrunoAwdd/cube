@@ -106,6 +106,9 @@ async fn upload_handler(
                 }
             }
             "file" => {
+                if let Some(content_type) = field.content_type() {
+                    println!("📦 Tipo MIME: {}", content_type);
+}
                 let original_filename = field.file_name().map(|f| f.to_string());
 
                 print!("original_filename: {:?}", original_filename);

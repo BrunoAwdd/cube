@@ -121,7 +121,13 @@ class _UploadPageState extends State<UploadPage> {
         Uri.parse('http://bruno-linux:8080/upload'),
       );
 
-      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+      final fileBytes = await file.readAsBytes();
+      request.files.add(http.MultipartFile.fromBytes(
+        'file',
+        fileBytes,
+        filename: file.path.split('/').last,
+      ));
+
       request.fields['modified_at'] = asset.modifiedDateTime.toUtc().toIso8601String();
       request.fields['updated_at'] = DateTime.now().toIso8601String();
       request.fields['username'] = "bruno"; // se ainda for relevante
