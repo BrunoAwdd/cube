@@ -315,6 +315,7 @@ dependencies = [
  "hyper-util",
  "local-ip-address",
  "multipart",
+ "rand 0.8.5",
  "rusqlite",
  "serde",
  "serde_json",
