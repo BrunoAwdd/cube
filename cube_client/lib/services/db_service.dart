@@ -46,5 +46,6 @@ class DbService {
     final dbPath = await getDatabasesPath();
     final path = p.join(dbPath, 'photos.db');
     await deleteDatabase(path);
+    await init();
   }
 }
