@@ -5,6 +5,7 @@ mod utils;
 use axum::{routing::{get, post}, Router};
 use handlers::upload::upload_handler;
 use handlers::auth::{generate_code_handler, auth_handler};
+use handlers::upload_raw::upload_raw_handler;
 use state::AppState;
 use dirs::picture_dir;
 use local_ip_address::local_ip;
@@ -52,6 +53,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/upload", post(upload_handler))
+        .route("/upload_raw", post(upload_raw_handler))
         .route("/generate_code", get(generate_code_handler))
         .route("/auth", post(auth_handler))
         .route("/ping", get(|| async { "pong" }))
