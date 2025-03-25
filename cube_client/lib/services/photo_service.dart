@@ -6,7 +6,7 @@ import 'db_service.dart';
 class PhotoService {
   static Future<List<AssetEntity>> loadUnsentPhotos() async {    final albums = await PhotoManager.getAssetPathList(type: RequestType.image);
     final recent = albums.first;
-    final assets = await recent.getAssetListPaged(page: 0, size: 1000);
+    final assets = await recent.getAssetListPaged(page: 0, size: 5);
 
     for (final asset in assets) {
       final file = await asset.originFile;
