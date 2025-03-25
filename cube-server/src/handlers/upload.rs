@@ -44,12 +44,8 @@ pub async fn upload_handler(
                 username = field.text().await.unwrap_or(username);
             }
             "file" => {
-                if let Some(content_type) = field.content_type() {
-                    println!("📦 Tipo MIME: {}", content_type);
-                }
-
                 let original_filename = field.file_name().map(|f| f.to_string());
-
+ 
                 let ext = original_filename
                     .as_ref()
                     .map(|name| {
@@ -65,6 +61,11 @@ pub async fn upload_handler(
                 };
 
                 filename = Some(original_filename.unwrap_or(safe_filename));
+
+                if let Some(content_type) = field.content_type() {
+                    println!("Name: {:?}", filename);
+                    println!("📦 Tipo MIME: {}", content_type);
+                }
                 file_bytes = field.bytes().await.ok();
             }
             _ => {}
@@ -100,5 +101,8 @@ pub async fn upload_handler(
     ).unwrap();
 
     println!("Recebido e salvo: {}", path.to_string_lossy());
+    println!("==================");
     "Upload finalizado!".to_string()
+
+    
 }

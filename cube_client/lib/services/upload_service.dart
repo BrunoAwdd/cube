@@ -16,6 +16,11 @@ class UploadService {
 
     for (final asset in photos) {
       final file = await asset.originFile;
+      if (file == null) {
+        print('⚠️ Ignorando arquivo nulo: ${asset.id}');
+        continue;
+      }
+
       if (file == null) continue;
 
       final fileBytes = await file.readAsBytes();
