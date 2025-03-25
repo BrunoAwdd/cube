@@ -8,9 +8,10 @@ import 'db_service.dart';
 class UploadService {
   static Future<void> uploadAll(
     List<AssetEntity> photos, {
-    required void Function(String msg) onProgress,
+    required void Function(String msg, String assetId) onProgress,
+    required void Function(String assetId) onSuccess,
+    required void Function(String error, String assetId) onError,
     required void Function() onDone,
-    required void Function(String error) onError,
   }) async {
     final db = DbService.db;
 
@@ -22,6 +23,8 @@ class UploadService {
       }
 
       try {
+        onProgress('📤 Enviando ${file.path}', asset.id);
+
         final fileBytes = await file.readAsBytes();
         final hash = sha256.convert(fileBytes).toString();
 
@@ -45,14 +48,14 @@ class UploadService {
             where: 'sha = ?',
             whereArgs: [hash],
           );
-          onProgress('✅ Enviada: ${file.path}');
+          onSuccess(asset.id);
         } else if (response.body.contains('existente')) {
-          onProgress('⚠️ Já existia: ${file.path}');
+          onSuccess(asset.id); // mesmo status de sucesso para arquivos já existentes
         } else {
-          onError('❌ Erro ${response.statusCode}: ${response.body}');
+          onError('❌ Erro ${response.statusCode}: ${response.body}', asset.id);
         }
       } catch (e) {
-        onError('❌ Falha ao enviar ${file.path}: $e');
+        onError('❌ Falha ao enviar ${file.path}: $e', asset.id);
       }
     }
 
