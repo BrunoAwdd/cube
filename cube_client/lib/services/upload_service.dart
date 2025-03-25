@@ -6,11 +6,11 @@ import 'db_service.dart';
 
 class UploadService {
   static Future<void> uploadAll(
-      List<AssetEntity> photos, {
-        required void Function(String msg) onProgress,
-        required void Function() onDone,
-        required void Function(String error) onError,
-      }) async {
+    List<AssetEntity> photos, {
+    required void Function(String msg) onProgress,
+    required void Function() onDone,
+    required void Function(String error) onError,
+  }) async {
     final db = DbService.db;
 
     for (final asset in photos) {
@@ -39,15 +39,18 @@ class UploadService {
         onProgress('📤 Enviando ${file.path}');
         final response = await request.send();
 
-        if (response.statusCode == 200) {
+        final body = await response.stream.bytesToString(); // lê a resposta completa
+
+        if (response.statusCode == 200 && body.contains('Upload finalizado')) {
           await db.update(
             'uploads',
             {'updated_at': DateTime.now().toIso8601String()},
             where: 'sha = ?',
             whereArgs: [hash],
           );
+          onProgress('✅ Enviada: ${file.path}');
         } else {
-          onError('❌ Erro ${response.statusCode} ao enviar ${file.path}');
+          onError('❌ Erro ${response.statusCode}: $body');
         }
       } catch (e) {
         onError('❌ Falha ao enviar ${file.path}: $e');
