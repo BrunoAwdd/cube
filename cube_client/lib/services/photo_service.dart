@@ -1,13 +1,10 @@
 import 'package:photo_manager/photo_manager.dart';
 import 'package:crypto/crypto.dart';
-import 'dart:convert';
-import 'dart:io';
 
 import 'db_service.dart';
 
 class PhotoService {
-  static Future<List<AssetEntity>> loadUnsentPhotos() async {
-    final albums = await PhotoManager.getAssetPathList(type: RequestType.image);
+  static Future<List<AssetEntity>> loadUnsentPhotos() async {    final albums = await PhotoManager.getAssetPathList(type: RequestType.image);
     final recent = albums.first;
     final assets = await recent.getAssetListPaged(page: 0, size: 1000);
 

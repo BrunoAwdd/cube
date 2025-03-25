@@ -2,11 +2,11 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 
 class DbService {
-  static late Database _db;
+  static late Database db;
 
   static Future<void> init() async {
     final dbPath = await getDatabasesPath();
-    _db = await openDatabase(
+    db = await openDatabase(
       p.join(dbPath, 'photos.db'),
       onCreate: (db, version) {
         return db.execute(
@@ -18,9 +18,9 @@ class DbService {
   }
 
   static Future<void> insertIfNotExists(String name, String sha, String modifiedAt) async {
-    final existing = await _db.query('uploads', where: 'sha = ?', whereArgs: [sha]);
+    final existing = await db.query('uploads', where: 'sha = ?', whereArgs: [sha]);
     if (existing.isEmpty) {
-      await _db.insert('uploads', {
+      await db.insert('uploads', {
         'name': name,
         'sha': sha,
         'modified_at': modifiedAt,
@@ -30,7 +30,7 @@ class DbService {
   }
 
   static Future<void> updateAsSent(String sha) async {
-    await _db.update(
+    await db.update(
       'uploads',
       {'updated_at': DateTime.now().toIso8601String()},
       where: 'sha = ?',
@@ -39,7 +39,7 @@ class DbService {
   }
 
   static Future<List<Map<String, dynamic>>> getUnsent() {
-    return _db.query('uploads', where: 'updated_at IS NULL');
+    return db.query('uploads', where: 'updated_at IS NULL');
   }
 
   static Future<void> clear() async {

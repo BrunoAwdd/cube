@@ -31,11 +31,26 @@ class _UploadPageState extends State<UploadPage> {
 
   Future<void> _uploadPhotos() async {
     setState(() => isUploading = true);
-    await UploadService.uploadAll(photos);
-    setState(() {
-      isUploading = false;
-      photos.clear();
-    });
+    await UploadService.uploadAll(
+      photos,
+      onProgress: (path) => print('📤 Enviando $path'),
+      onDone: () {
+        setState(() {
+          isUploading = false;
+          photos.clear();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Upload finalizado com sucesso!')),
+        );
+      },
+      onError: (msg) {
+        print('❌ Erro: $msg');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro: $msg')),
+        );
+        setState(() => isUploading = false);
+      },
+    );
   }
 
   @override
@@ -77,7 +92,9 @@ class _UploadPageState extends State<UploadPage> {
                 return FutureBuilder<Uint8List?>(
                   future: asset.thumbnailDataWithSize(const ThumbnailSize(200, 200)),
                   builder: (context, snapshot) {
-                    if (!snapshot.hasData) return const ListTile(title: Text('Carregando...'));
+                    if (!snapshot.hasData) {
+                      return const ListTile(title: Text('Carregando...'));
+                    }
                     return ListTile(
                       leading: Image.memory(snapshot.data!, fit: BoxFit.cover),
                       title: Text('Foto ${index + 1}'),

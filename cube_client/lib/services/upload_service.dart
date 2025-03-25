@@ -1,19 +1,18 @@
-import 'package:http/http.dart' as http;
 import 'package:photo_manager/photo_manager.dart';
+import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
-import 'dart:io';
 
 import 'db_service.dart';
 
 class UploadService {
-  static const String serverUrl = 'http://bruno-linux:8080/upload';
+  static Future<void> uploadAll(
+      List<AssetEntity> photos, {
+        required void Function(String msg) onProgress,
+        required void Function() onDone,
+        required void Function(String error) onError,
+      }) async {
+    final db = DbService.db;
 
-  static Future<void> uploadAll(List<AssetEntity> photos) async {
-List<AssetEntity> photos,
-    {required void Function(String) onProgress,
-     required void Function() onDone,
-     required void Function(String) onError}) async {
-    
     for (final asset in photos) {
       final file = await asset.originFile;
       if (file == null) continue;
