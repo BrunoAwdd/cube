@@ -1,37 +1,37 @@
 use axum::{
-    extract::{State, RawBody},
-    http::HeaderMap,
-    debug_handler,
-    body::Bytes,
+    extract::{State},
+    http::{HeaderMap},
+    body::Body,
 };
-use std::{path::PathBuf, sync::Arc};
+use axum::response::IntoResponse;
+use axum::debug_handler;
+use std::{sync::Arc};
 use chrono::{DateTime, Utc};
-use rusqlite::params;
 use uuid::Uuid;
+use axum::body::to_bytes;
+use rusqlite::params;
 
-use crate::{
-    state::AppState,
-    utils::{hash::compute_hash, path::get_output_path, file::save_file},
-};
+use crate::state::AppState;
+use crate::utils::{path::get_output_path, file::save_file, hash::compute_hash};
 
 #[debug_handler]
 pub async fn upload_raw_handler(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
-    RawBody(body): RawBody,
-) -> String {
-    // Leitura do corpo
-    let data = match hyper::body::to_bytes(body).await {
-        Ok(d) => d,
-        Err(_) => return "Erro ao ler corpo".to_string(),
-    };
+    body: Body,
+) -> impl IntoResponse {
+    let username = headers
+        .get("X-Username")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("default")
+        .to_string();
 
-    // Headers
     let filename = headers
         .get("X-Filename")
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string())
         .unwrap_or_else(|| format!("{}_upload", Uuid::new_v4()));
+
 
     let modified_at = headers
         .get("X-Modified-At")
@@ -39,19 +39,20 @@ pub async fn upload_raw_handler(
         .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
         .map(|dt| dt.with_timezone(&Utc));
 
-    let username = headers
-        .get("X-Username")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("bruno")
-        .to_string();
+    let data = match to_bytes(body, usize::MAX).await {
+        Ok(bytes) => bytes.to_vec(), // ← agora é Vec<u8>
+        Err(_) => return "Erro ao ler corpo".to_string(),
+    };
 
-    // Hash
     let hash = compute_hash(&data);
 
-    // DB check
     let db = state.db.lock().await;
     let exists: bool = db
-        .query_row("SELECT EXISTS(SELECT 1 FROM uploads WHERE hash = ?1)", [hash.clone()], |row| row.get(0))
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM uploads WHERE hash = ?1)",
+            [hash.clone()],
+            |row| row.get(0),
+        )
         .unwrap_or(false);
 
     if exists {
@@ -60,13 +61,15 @@ pub async fn upload_raw_handler(
     }
 
     let path = get_output_path(&state.upload_dir, &username, &filename, modified_at).await;
+    println!("modified_at recebido: {:?}", modified_at);
 
     save_file(&path, &data).await;
 
     db.execute(
         "INSERT INTO uploads (hash, filename) VALUES (?1, ?2)",
         params![hash, filename],
-    ).unwrap();
+    )
+    .unwrap();
 
     println!("Recebido e salvo: {}", path.to_string_lossy());
     "Upload finalizado!".to_string()

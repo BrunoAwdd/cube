@@ -3,7 +3,6 @@ mod handlers;
 mod utils;
 
 use axum::{routing::{get, post}, Router};
-use handlers::upload::upload_handler;
 use handlers::auth::{generate_code_handler, auth_handler};
 use handlers::upload_raw::upload_raw_handler;
 use state::AppState;
@@ -52,7 +51,6 @@ async fn main() {
     let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any);
 
     let app = Router::new()
-        .route("/upload", post(upload_handler))
         .route("/upload_raw", post(upload_raw_handler))
         .route("/generate_code", get(generate_code_handler))
         .route("/auth", post(auth_handler))
