@@ -16,6 +16,7 @@ class UploadPage extends StatefulWidget {
 class _UploadPageState extends State<UploadPage> {
   List<AssetEntity> photos = [];
   bool isUploading = false;
+  final Map<String, String> _statusMap = {}; // asset.id => status
 
   @override
   void initState() {
@@ -25,32 +26,49 @@ class _UploadPageState extends State<UploadPage> {
 
   Future<void> _setup() async {
     await DbService.init();
-    final assets = await PhotoService.loadUnsentPhotos();
+    final assets = await PhotoService.loadUnsentPhotos(limit: 50);
     setState(() => photos = assets);
   }
 
   Future<void> _uploadPhotos() async {
     setState(() => isUploading = true);
+
     await UploadService.uploadAll(
       photos,
-      onProgress: (path) => print('📤 Enviando $path'),
+      onProgress: (path, assetId) {
+        setState(() => _statusMap[assetId] = 'uploading');
+      },
+      onSuccess: (assetId) {
+        setState(() => _statusMap[assetId] = 'success');
+      },
+      onError: (msg, assetId) {
+        print('❌ Erro: $msg');
+        setState(() => _statusMap[assetId] = 'error');
+      },
       onDone: () {
-        setState(() {
-          isUploading = false;
-          photos.clear();
-        });
+        setState(() => isUploading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('✅ Upload finalizado com sucesso!')),
         );
       },
-      onError: (msg) {
-        print('❌ Erro: $msg');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro: $msg')),
-        );
-        setState(() => isUploading = false);
-      },
     );
+  }
+
+  Widget _buildStatusIcon(String? status) {
+    switch (status) {
+      case 'success':
+        return Icon(Icons.check_circle, color: Colors.green, size: 20);
+      case 'error':
+        return Icon(Icons.error, color: Colors.red, size: 20);
+      case 'uploading':
+        return const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        );
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   @override
@@ -60,46 +78,70 @@ class _UploadPageState extends State<UploadPage> {
       body: Column(
         children: [
           const SizedBox(height: 10),
-          ElevatedButton(
-            onPressed: isUploading ? null : _uploadPhotos,
-            child: Text(isUploading ? 'Enviando...' : 'Enviar Fotos'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await DbService.clear();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Banco deletado!')),
-              );
-            },
-            child: const Text('Deletar DB'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final assets = await PhotoService.loadUnsentPhotos();
-              setState(() => photos = assets);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Lista atualizada!')),
-              );
-            },
-            child: const Text('Atualizar Lista'),
+          Wrap(
+            spacing: 10,
+            children: [
+              ElevatedButton(
+                onPressed: isUploading ? null : _uploadPhotos,
+                child: Text(isUploading ? 'Enviando...' : 'Enviar Fotos'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  await DbService.clear();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Banco deletado!')),
+                  );
+                },
+                child: const Text('Deletar DB'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final assets = await PhotoService.loadUnsentPhotos(limit: 50);
+                  setState(() => photos = assets);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Lista atualizada!')),
+                  );
+                },
+                child: const Text('Atualizar Lista'),
+              ),
+            ],
           ),
           const Divider(),
           Expanded(
-            child: ListView.builder(
+            child: GridView.builder(
+              padding: const EdgeInsets.all(8),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                crossAxisSpacing: 6,
+                mainAxisSpacing: 6,
+              ),
               itemCount: photos.length,
               itemBuilder: (context, index) {
                 final asset = photos[index];
-                return FutureBuilder<Uint8List?>(
-                  future: asset.thumbnailDataWithSize(const ThumbnailSize(200, 200)),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const ListTile(title: Text('Carregando...'));
-                    }
-                    return ListTile(
-                      leading: Image.memory(snapshot.data!, fit: BoxFit.cover),
-                      title: Text('Foto ${index + 1}'),
-                    );
-                  },
+                final status = _statusMap[asset.id];
+
+                return Stack(
+                  children: [
+                    Positioned.fill(
+                      child: FutureBuilder<Uint8List?>(
+                        future: asset.thumbnailDataWithSize(const ThumbnailSize(300, 300)),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return Container(color: Colors.black12);
+                          }
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.memory(snapshot.data!, fit: BoxFit.cover),
+                          );
+                        },
+                      ),
+                    ),
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: _buildStatusIcon(status),
+                    ),
+                  ],
                 );
               },
             ),
