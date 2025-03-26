@@ -4,7 +4,8 @@ import 'package:crypto/crypto.dart';
 import 'db_service.dart';
 
 class PhotoService {
-  static Future<List<AssetEntity>> loadUnsentPhotos({limit: 5}) async {    final albums = await PhotoManager.getAssetPathList(type: RequestType.image);
+  static Future<List<AssetEntity>> loadUnsentPhotos({limit: 5}) async {    
+    final albums = await PhotoManager.getAssetPathList(type: RequestType.image);
     final recent = albums.first;
     final assets = await recent.getAssetListPaged(page: 0, size: limit);
 
