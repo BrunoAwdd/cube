@@ -4,7 +4,7 @@ import 'package:photo_manager/photo_manager.dart';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 
-Future<void> sendThumbnailsToRust(List<AssetEntity> photos, String serverIp) async {
+Future<void> sendThumbnailsToRust(List<AssetEntity> photos) async {
   final List<Map<String, dynamic>> payload = [];
 
   for (final asset in photos) {
@@ -31,7 +31,7 @@ Future<void> sendThumbnailsToRust(List<AssetEntity> photos, String serverIp) asy
 
   try {
     final response = await http.post(
-      Uri.parse("http://$serverIp:8080/thumbs"),
+      Uri.parse("http://bruno-linux:8080/thumbs"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode(payload),
     );
