@@ -6,7 +6,7 @@ import { QrCard } from "./QrCard";
 const App = () => {
   const [isSynced, setIsSynced] = useState(false);
 
-  const serverAddress = "http://127.0.0.1:8080"; // substitua conforme necessário
+  const serverAddress = "http://bruno-linux:8080"; // substitua conforme necessário
 
   return (
     <FluentProvider
