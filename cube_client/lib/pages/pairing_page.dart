@@ -81,9 +81,6 @@ class _PairingPageState extends State<PairingPage> {
     }
   }
 
-
-
-
   void _onQRViewCreated(QRViewController controller) {
     controller.scannedDataStream.listen((scanData) async {
       if (_scanned) return;

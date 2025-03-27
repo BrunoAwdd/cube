@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'dart:typed_data';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';r
 
 import '../services/ws_service.dart';
 import '../services/db_service.dart';
@@ -24,15 +25,31 @@ class _UploadPageState extends State<UploadPage> {
   @override
   void initState() {
     super.initState();
-    final ws = Provider.of<WebSocketService>(context, listen: false);
-    ws.setOnSessionLost(() {
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/pair');
-      }
-    });
-    _setup();
-  }
 
+    final ws = Provider.of<WebSocketService>(context, listen: false);
+
+    Future.microtask(() async {
+      if (ws.currentIp == null) {
+        final prefs = await SharedPreferences.getInstance();
+        final ip = prefs.getString("ip");
+        if (ip != null && ip.isNotEmpty) {
+          print("📲 Recarregando IP do SharedPreferences: $ip");
+          ws.connect(ip);
+        }
+      } else {
+        print("📲 IP já carregado no serviço: ${ws.currentIp}");
+        ws.connect(ws.currentIp!);
+      }
+
+      ws.setOnSessionLost(() {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/pair');
+        }
+      });
+
+      await _setup();
+    });
+  }
 
   Future<void> _setup() async {
     await DbService.init();
