@@ -16,15 +16,15 @@ class _SplashPageState extends State<SplashPage> {
     _checkPairing();
   }
 
-  final username = prefs.getString("username");
-  if (username == null || username.isEmpty) {
-    Navigator.pushReplacementNamed(context, '/login');
-    return;
-  }
-
-
   Future<void> _checkPairing() async {
     final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString("username");
+
+    if (username == null || username.isEmpty) {
+      Navigator.pushReplacementNamed(context, '/login');
+      return;
+    }
+
     final ip = prefs.getString("ip");
     final token = prefs.getString("token");
 
