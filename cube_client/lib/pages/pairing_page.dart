@@ -53,16 +53,19 @@ class _PairingPageState extends State<PairingPage> {
     }
   }
 
-  Future<void> _processLink(String rawLink) async {
+  Future<void> _processLink(String link) async {
     try {
-      final normalizedLink = rawLink.startsWith("http")
-          ? rawLink
-          : "http://$rawLink";
-      final uri = Uri.parse(normalizedLink);
+      // Garante que o link tenha http://
+      if (!link.startsWith("http")) {
+        link = "http://$link";
+      }
+
+      final uri = Uri.parse(link);
       final code = uri.queryParameters['code'];
       final ip = uri.host;
 
-      if (ip.isEmpty || code == null) throw "Link inválido";
+      if (ip.isEmpty) throw "Link inválido";
+      if (code == null) throw "Code inválido";
 
       const username = "bruno";
       await _authenticate(ip, code, username);
@@ -73,6 +76,8 @@ class _PairingPageState extends State<PairingPage> {
       setState(() => _scanned = false);
     }
   }
+
+
 
 
   void _onQRViewCreated(QRViewController controller) {
