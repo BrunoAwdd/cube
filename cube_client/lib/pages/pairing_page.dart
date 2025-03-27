@@ -56,7 +56,9 @@ class _PairingPageState extends State<PairingPage> {
       final code = uri.queryParameters['code'];
       final ip = uri.host;
 
-      if (code == null || ip.isEmpty) throw "Link inválido";
+      if (ip.isEmpty) throw "Link inválido";
+      if (code == null) throw "Code inválido";
+      //if (code == null || ip.isEmpty) throw "Link inválido";
 
       const username = "bruno";
       await _authenticate(ip, code, username);
