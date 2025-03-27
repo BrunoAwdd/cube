@@ -1,4 +1,5 @@
 /target
+/.thumbs
 
 main_copy.rs
 uploads.db
