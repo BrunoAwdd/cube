@@ -1,23 +1,24 @@
-import { useState } from "react";
 import { FluentProvider, webLightTheme } from "@fluentui/react-components";
 import { PhotoGrid } from "./PhotoGrid";
-import { QrCard } from "./QrCard";
+import { QrCodePanel } from "./qr/qrCodePanel";
+import { useState } from "react";
+import { useWebSocket } from "./hooks/useWebSocket";
+
+const SERVER_URL = "bruno-linux:8080"; // ou localhost
 
 const App = () => {
-  const [isSynced, setIsSynced] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
 
-  const serverAddress = "http://bruno-linux:8080"; // substitua conforme necessário
+  useWebSocket((receivedToken) => {
+    setToken(receivedToken);
+  });
 
   return (
     <FluentProvider
       theme={webLightTheme}
       style={{ height: "100vh", padding: 24 }}
     >
-      {!isSynced ? (
-        <QrCard value={serverAddress} onConfirmed={() => setIsSynced(true)} />
-      ) : (
-        <PhotoGrid />
-      )}
+      {!token ? <QrCodePanel /> : <PhotoGrid />}
     </FluentProvider>
   );
 };
