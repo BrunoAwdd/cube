@@ -85,8 +85,7 @@ class _UploadPageState extends State<UploadPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Enviar Fotos pro PC')),
-      actions: [
+      appBar: AppBar(title: const Text('Enviar Fotos pro PC'), actions: [
         Consumer<WebSocketService>(
           builder: (context, ws, _) => Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -106,7 +105,7 @@ class _UploadPageState extends State<UploadPage> {
             ),
           ),
         ),
-      ],
+      ],),
       body: Column(
         children: [
           const SizedBox(height: 10),
