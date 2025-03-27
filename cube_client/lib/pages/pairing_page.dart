@@ -13,6 +13,7 @@ class PairingPage extends StatefulWidget {
 
 class _PairingPageState extends State<PairingPage> {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
+  final TextEditingController manualController = TextEditingController();
   bool _scanned = false;
 
   Future<void> _authenticate(String ip, String code, String username) async {
@@ -34,7 +35,6 @@ class _PairingPageState extends State<PairingPage> {
           const SnackBar(content: Text("✅ Pareado com sucesso!")),
         );
 
-        // Vá para a próxima página (ex: Gallery)
         Navigator.pushReplacementNamed(context, '/gallery');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -50,29 +50,30 @@ class _PairingPageState extends State<PairingPage> {
     }
   }
 
+  Future<void> _processLink(String link) async {
+    try {
+      final uri = Uri.parse(link);
+      final code = uri.queryParameters['code'];
+      final ip = uri.host;
+
+      if (code == null || ip.isEmpty) throw "Link inválido";
+
+      const username = "bruno";
+      await _authenticate(ip, code, username);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Erro: $e")),
+      );
+      setState(() => _scanned = false);
+    }
+  }
+
   void _onQRViewCreated(QRViewController controller) {
     controller.scannedDataStream.listen((scanData) async {
       if (_scanned) return;
       _scanned = true;
 
-      try {
-        final uri = Uri.parse(scanData.code ?? '');
-        final code = uri.queryParameters['code'];
-        final ip = uri.host;
-
-        if (code == null || ip.isEmpty) {
-          throw "QR inválido";
-        }
-
-        // TODO: solicitar username ao usuário, por enquanto é fixo:
-        const username = "bruno";
-        await _authenticate(ip, code, username);
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ Erro: $e")),
-        );
-        setState(() => _scanned = false);
-      }
+      await _processLink(scanData.code ?? '');
     });
   }
 
@@ -80,9 +81,36 @@ class _PairingPageState extends State<PairingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Pareamento com o Servidor')),
-      body: QRView(
-        key: qrKey,
-        onQRViewCreated: _onQRViewCreated,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: manualController,
+                    decoration: const InputDecoration(
+                      labelText: 'Colar link de pareamento',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () => _processLink(manualController.text),
+                  child: const Text('Conectar'),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: QRView(
+              key: qrKey,
+              onQRViewCreated: _onQRViewCreated,
+            ),
+          ),
+        ],
       ),
     );
   }
