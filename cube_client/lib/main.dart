@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import 'pages/upload_page.dart';
 import 'pages/login_page.dart';
 import 'pages/pairing_page.dart';
@@ -14,26 +16,19 @@ void main() {
   );
 }
 
-
 class MyApp extends StatelessWidget {
-  final WsController controller;
-
-  const MyApp(this.controller, {super.key});
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: controller,
-      child: MaterialApp(
-    initialRoute: '/',
+    return MaterialApp(
+      initialRoute: '/',
       routes: {
         '/': (context) => const SplashPage(),
         '/login': (context) => const LoginPage(),
         '/pair': (context) => const PairingPage(),
-        '/gallery': (context) => const UploadPage(), 
+        '/gallery': (context) => const UploadPage(),
       },
-    ),
     );
   }
 }
-
