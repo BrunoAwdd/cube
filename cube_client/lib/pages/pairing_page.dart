@@ -64,6 +64,10 @@ class _PairingPageState extends State<PairingPage> {
       final code = uri.queryParameters['code'];
       final ip = uri.host;
 
+      print("Uri: $uri");
+      print("Code: $code");
+      print("Ip: $ip");
+
       if (ip.isEmpty) throw "Link inválido";
       if (code == null) throw "Code inválido";
 
