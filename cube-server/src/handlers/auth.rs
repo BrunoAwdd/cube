@@ -24,7 +24,9 @@ pub struct CodeResponse {
 #[derive(Deserialize)]
 pub struct AuthRequest {
     pub code: String,
+    pub username: String,
 }
+
 
 #[derive(Serialize)]
 pub struct AuthResponse {
@@ -42,6 +44,7 @@ pub async fn generate_code_handler(
         Ok(ip) => ip.to_string(),
         Err(_) => "127.0.0.1".to_string(),
     };
+
 
     let now = Utc::now();
 
@@ -79,8 +82,8 @@ pub async fn auth_handler(
     let now = Utc::now();
 
     let _ = db.execute(
-        "INSERT INTO tokens (token, ip, created_at) VALUES (?1, ?2, ?3)",
-        params![token, ip, now.to_rfc3339()],
+        "INSERT OR REPLACE INTO auth_codes (code, created_at, ip) VALUES (?1, ?2, ?3)",
+        params![code, now.to_rfc3339(), ip],
     );
 
     (StatusCode::OK, AxumJson(AuthResponse { token })).into_response()

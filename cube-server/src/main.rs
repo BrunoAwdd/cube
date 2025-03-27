@@ -38,6 +38,16 @@ async fn main() {
     ).unwrap();
 
     conn.execute(
+        "CREATE TABLE IF NOT EXISTS tokens (
+            token TEXT PRIMARY KEY,
+            username TEXT,
+            ip TEXT,
+            created_at TIMESTAMP
+        )",
+        [],
+    ).unwrap();
+
+    conn.execute(
         "CREATE TABLE IF NOT EXISTS auth_codes (
             code TEXT PRIMARY KEY,
             created_at TIMESTAMP,
