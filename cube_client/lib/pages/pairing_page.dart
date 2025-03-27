@@ -13,7 +13,10 @@ class PairingPage extends StatefulWidget {
 
 class _PairingPageState extends State<PairingPage> {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
-  final TextEditingController manualController = TextEditingController();
+  final TextEditingController manualController = TextEditingController(
+    text: 'http://bruno-linux:8080?code=ABC123',
+  );
+
   bool _scanned = false;
 
   Future<void> _authenticate(String ip, String code, String username) async {
