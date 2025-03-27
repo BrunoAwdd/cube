@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'dart:typed_data';
+import 'package:provider/provider.dart';
 
+import '../services/ws_service.dart';
 import '../services/db_service.dart';
 import '../services/photo_service.dart';
 import '../services/upload_service.dart';
@@ -22,8 +24,15 @@ class _UploadPageState extends State<UploadPage> {
   @override
   void initState() {
     super.initState();
+    final ws = Provider.of<WebSocketService>(context, listen: false);
+    ws.setOnSessionLost(() {
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/pair');
+      }
+    });
     _setup();
   }
+
 
   Future<void> _setup() async {
     await DbService.init();
@@ -77,6 +86,27 @@ class _UploadPageState extends State<UploadPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Enviar Fotos pro PC')),
+      actions: [
+        Consumer<WebSocketService>(
+          builder: (context, ws, _) => Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.circle,
+                  size: 10,
+                  color: ws.isConnected ? Colors.green : Colors.red,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  ws.isConnected ? 'Conectado' : 'Offline',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
       body: Column(
         children: [
           const SizedBox(height: 10),
