@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import '../services/db_service.dart';
 import '../services/photo_service.dart';
 import '../services/upload_service.dart';
+import '../services/send_thumbnails.dart';
 
 class UploadPage extends StatefulWidget {
   const UploadPage({super.key});
@@ -28,6 +29,7 @@ class _UploadPageState extends State<UploadPage> {
     await DbService.init();
     final assets = await PhotoService.loadUnsentPhotos(limit: 50);
     setState(() => photos = assets);
+    await sendThumbnailsToRust(photos);
   }
 
   Future<void> _uploadPhotos() async {
