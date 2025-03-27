@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
+import '../services/ws_service.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -32,6 +34,10 @@ class _SplashPageState extends State<SplashPage> {
       try {
         final res = await http.get(Uri.parse("http://$ip:8080/poll_token?token=$token"));
         if (res.statusCode == 200) {
+          // ✅ Conecta ao WebSocket ANTES de ir pra gallery
+          final ws = Provider.of<WebSocketService>(context, listen: false);
+          ws.connect(ip);
+
           Navigator.pushReplacementNamed(context, '/gallery');
           return;
         }

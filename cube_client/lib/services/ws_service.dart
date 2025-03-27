@@ -27,6 +27,7 @@ class WebSocketService with ChangeNotifier {
     notifyListeners();
 
     final url = 'ws://$ip:8080/ws/mobile';
+    print("📲 Conectando ao WebSocket: $url - $ip");
     try {
       _channel = WebSocketChannel.connect(Uri.parse(url));
     } catch (e) {
@@ -37,9 +38,17 @@ class WebSocketService with ChangeNotifier {
 
     _channel!.stream.listen(
       (message) {
+        print('📩 WS mensagem recebida: $message'); 
         try {
           final data = jsonDecode(message);
           if (data is Map<String, dynamic>) {
+            if (!_connected) {
+              print('🟢 Primeira mensagem recebida, marcando como conectado');
+              _connected = true;
+              _connecting = false;
+              notifyListeners();
+            }
+
             for (final listener in _listeners) {
               listener(data);
             }
@@ -57,11 +66,8 @@ class WebSocketService with ChangeNotifier {
         _handleDisconnect();
       },
     );
-
-    _connected = true;
-    _connecting = false;
-    notifyListeners();
   }
+
 
   void _handleDisconnect() {
     _connected = false;
