@@ -5,11 +5,13 @@ mod utils;
 use axum::{routing::{get, post}, Router};
 use handlers::auth::{generate_code_handler, auth_handler};
 use handlers::upload_raw::upload_raw_handler;
+use handlers::config::set_config_handler;
 use state::AppState;
 use dirs::picture_dir;
 use local_ip_address::local_ip;
 use std::{sync::Arc, net::SocketAddr};
 use tokio::fs;
+use tokio::sync::RwLock;
 use tower_http::cors::{CorsLayer, Any};
 use rusqlite::Connection;
 use tokio::sync::Mutex;
@@ -44,15 +46,17 @@ async fn main() {
     ).unwrap();
 
     let state = AppState {
-        upload_dir: default_dir,
+        upload_dir: Arc::new(RwLock::new(default_dir)),
         db: Arc::new(Mutex::new(conn)),
     };
+
 
     let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any);
 
     let app = Router::new()
         .route("/upload_raw", post(upload_raw_handler))
         .route("/generate_code", get(generate_code_handler))
+        .route("/set-config", post(set_config_handler))
         .route("/auth", post(auth_handler))
         .route("/ping", get(|| async { "pong" }))
         .with_state(Arc::new(state))

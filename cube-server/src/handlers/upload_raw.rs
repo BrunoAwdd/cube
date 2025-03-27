@@ -60,7 +60,9 @@ pub async fn upload_raw_handler(
         return "Arquivo já existente, ignorado.".to_string();
     }
 
-    let path = get_output_path(&state.upload_dir, &username, &filename, modified_at).await;
+    let dir = state.upload_dir.read().await;
+    let path = get_output_path(&dir, &username, &filename, modified_at).await;
+
     println!("modified_at recebido: {:?}", modified_at);
 
     save_file(&path, &data).await;
