@@ -5,6 +5,7 @@ mod utils;
 use axum::{routing::{get, post}, Router};
 use handlers::auth::{generate_code_handler, auth_handler};
 use handlers::upload_raw::upload_raw_handler;
+use handlers::thumbs::upload_thumbs_handler;
 use handlers::config::set_config_handler;
 use state::AppState;
 use dirs::picture_dir;
@@ -55,6 +56,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/upload_raw", post(upload_raw_handler))
+        .route("/thumbs", post(upload_thumbs_handler))
         .route("/generate_code", get(generate_code_handler))
         .route("/set-config", post(set_config_handler))
         .route("/auth", post(auth_handler))
