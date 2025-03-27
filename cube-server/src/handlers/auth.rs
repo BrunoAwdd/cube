@@ -10,9 +10,12 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use uuid::Uuid;
 use chrono::Utc;
+use axum::extract::ws::Message;
 
 use crate::state::AppState;
 use local_ip_address::local_ip;
+use serde_json::json;
+
 
 #[derive(Serialize)]
 pub struct CodeResponse {
@@ -61,12 +64,13 @@ pub async fn generate_code_handler(
     })
 }
 
-/// Recebe um código e gera token se válido
 pub async fn auth_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<AuthRequest>,
 ) -> impl IntoResponse {
     let db = state.db.lock().await;
+
+    println!("⚠️ Autenticando com o código {}", payload.code);
 
     let result: rusqlite::Result<String> = db.query_row(
         "SELECT ip FROM auth_codes WHERE code = ?1",
@@ -78,13 +82,27 @@ pub async fn auth_handler(
         Ok(ip) => ip,
         Err(_) => return (StatusCode::UNAUTHORIZED, "Código inválido").into_response(),
     };
+
     let token = Uuid::new_v4().to_string();
     let now = Utc::now();
 
+    // Salvar o novo token
     let _ = db.execute(
-        "INSERT OR REPLACE INTO auth_codes (code, created_at, ip) VALUES (?1, ?2, ?3)",
-        params![code, now.to_rfc3339(), ip],
+        "INSERT INTO tokens (token, username, ip, created_at) VALUES (?1, ?2, ?3, ?4)",
+        params![token, payload.username, ip, now.to_rfc3339()],
     );
+
+    drop(db); // libera o lock antes do envio
+
+    // 🔔 Notificar via WebSocket
+    let msg = json!({
+        "token": token
+    }).to_string();
+
+    let clients = state.ws_state.lock().await;
+    for tx in clients.iter() {
+        let _ = tx.send(Message::Text(msg.clone()));
+    }
 
     (StatusCode::OK, AxumJson(AuthResponse { token })).into_response()
 }

@@ -1,6 +1,7 @@
 mod state;
 mod handlers;
 mod utils;
+mod ws;
 
 use axum::{routing::{get, post}, Router};
 use handlers::auth::{generate_code_handler, auth_handler};
@@ -12,10 +13,10 @@ use dirs::picture_dir;
 use local_ip_address::local_ip;
 use std::{sync::Arc, net::SocketAddr};
 use tokio::fs;
-use tokio::sync::RwLock;
 use tower_http::cors::{CorsLayer, Any};
 use rusqlite::Connection;
-use tokio::sync::Mutex;
+use ws::create_ws_router;
+use tokio::sync::{Mutex, RwLock};
 
 #[tokio::main]
 async fn main() {
@@ -59,8 +60,10 @@ async fn main() {
     let state = AppState {
         upload_dir: Arc::new(RwLock::new(default_dir)),
         db: Arc::new(Mutex::new(conn)),
+        ws_state: Arc::new(Mutex::new(Vec::new())),
     };
 
+    let shared_state = Arc::new(state);
 
     let cors = CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any);
 
@@ -71,8 +74,10 @@ async fn main() {
         .route("/set-config", post(set_config_handler))
         .route("/auth", post(auth_handler))
         .route("/ping", get(|| async { "pong" }))
-        .with_state(Arc::new(state))
+        .merge(create_ws_router())
+        .with_state(shared_state.clone())
         .layer(cors);
+
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
 
