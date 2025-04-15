@@ -61,4 +61,39 @@ class UploadService {
 
     onDone();
   }
+  static Future<void> uploadSingle(
+    AssetEntity asset, {
+    String username = "bruno",
+  }) async {
+    final file = await asset.originFile;
+    if (file == null) {
+      print("⚠️ Arquivo nulo para ${asset.id}");
+      return;
+    }
+
+    final fileBytes = await file.readAsBytes();
+    final hash = sha256.convert(fileBytes).toString();
+
+    final uri = Uri.parse('http://bruno-linux:8080/upload_raw');
+
+    final response = await http.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-Filename': file.path.split('/').last,
+        'X-Modified-At': asset.modifiedDateTime.toUtc().toIso8601String(),
+        'X-Username': username,
+      },
+      body: fileBytes,
+    );
+
+    if (response.statusCode == 200 && response.body.contains('Upload finalizado')) {
+      print("✅ Upload concluído para $hash");
+    } else if (response.body.contains('existente')) {
+      print("ℹ️ Arquivo já existente: $hash");
+    } else {
+      print("❌ Falha ao enviar $hash: ${response.body}");
+    }
+  }
+
 }

@@ -31,7 +31,7 @@ Future<void> sendThumbnailsToRust(List<AssetEntity> photos) async {
 
   try {
     final response = await http.post(
-      Uri.parse("http://bruno-linux:8080/thumbs"),
+      Uri.parse("http://bruno-linux:8080/api/thumbs"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode(payload),
     );

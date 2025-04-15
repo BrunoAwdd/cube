@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'dart:typed_data';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';r
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:crypto/crypto.dart'; 
 
 import '../services/ws_service.dart';
 import '../services/db_service.dart';
@@ -27,6 +28,34 @@ class _UploadPageState extends State<UploadPage> {
     super.initState();
 
     final ws = Provider.of<WebSocketService>(context, listen: false);
+
+    ws.addListenerCallback((msg) async {
+      if (msg['action'] == 'send_raw' && msg['hash'] != null) {
+        print('📥 Pedido de envio do hash: ${msg['hash']}');
+        final hash = msg['hash'];
+        final paths = await PhotoManager.getAssetPathList(onlyAll: true);
+        final allAssets = await paths.first.getAssetListRange(start: 0, end: 9999);
+
+        for (final asset in allAssets) {
+          final file = await asset.originFile;
+          if (file == null) continue;
+
+          final fileBytes = await file.readAsBytes();
+          final localHash = sha256.convert(fileBytes).toString();
+
+          if (localHash == hash) {
+            print("✅ Hash encontrado. Enviando...");
+            await UploadService.uploadSingle(asset);
+            return;
+          }
+        }
+
+        print("❌ Nenhum asset encontrado com esse hash: $hash");
+      }
+    });
+
+
+    
 
     Future.microtask(() async {
       if (ws.currentIp == null) {

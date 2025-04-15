@@ -26,7 +26,7 @@ class WebSocketService with ChangeNotifier {
     _connecting = true;
     notifyListeners();
 
-    final url = 'ws://$ip:8080/ws/mobile';
+    final url = 'ws://$ip:8080/ws';
     print("📲 Conectando ao WebSocket: $url - $ip");
     try {
       _channel = WebSocketChannel.connect(Uri.parse(url));
@@ -37,36 +37,42 @@ class WebSocketService with ChangeNotifier {
     }
 
     _channel!.stream.listen(
-      (message) {
-        print('📩 WS mensagem recebida: $message'); 
-        try {
-          final data = jsonDecode(message);
-          if (data is Map<String, dynamic>) {
-            if (!_connected) {
-              print('🟢 Primeira mensagem recebida, marcando como conectado');
-              _connected = true;
-              _connecting = false;
-              notifyListeners();
-            }
-
-            for (final listener in _listeners) {
-              listener(data);
-            }
+    (message) {
+      print('📩 WS mensagem recebida: $message');
+      try {
+        final data = jsonDecode(message);
+        if (data is Map<String, dynamic>) {
+          if (!_connected) {
+            print('🟢 Conectado (mensagem válida recebida)');
+            _connected = true;
+            _connecting = false;
+            notifyListeners();
           }
-        } catch (e) {
-          print('❌ Erro ao decodificar WS: $e');
+
+          for (final listener in _listeners) {
+            listener(data);
+          }
         }
-      },
-      onError: (error) {
-        print('❌ Erro no WebSocket: $error');
-        _handleDisconnect();
-      },
-      onDone: () {
-        print('🟡 WebSocket desconectado');
-        _handleDisconnect();
-      },
-    );
+      } catch (e) {
+        print('❌ Erro ao decodificar WS: $e');
+      }
+    },
+    onError: (error) {
+      print('❌ Erro no WebSocket: $error');
+      _handleDisconnect();
+    },
+    onDone: () {
+      print('🟡 WebSocket desconectado');
+      _handleDisconnect();
+    },
+  );
+
+  // ✅ Acrescente essa parte após conectar com sucesso
+  _connected = true;
+  _connecting = false;
+  notifyListeners();
   }
+
 
 
   void _handleDisconnect() {
