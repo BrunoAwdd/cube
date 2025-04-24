@@ -1,55 +1,73 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Stack, Text } from "@fluentui/react";
 import { Photo } from "./types";
 import { useSelection } from "./useSelection";
 import { PhotoItem } from "./PhotoItem";
 import { PhotoToolbar } from "./PhotoToolbar";
 
-// Mock de fotos com os campos atualizados
-const mockPhotos: Photo[] = Array.from({ length: 50 }, (_, i) => ({
-  id: `photo-${i}`,
-  url: `https://picsum.photos/300/300?random=${i}`,
-  name: `imagem_${i + 1}.jpg`,
-  size: `${(Math.random() * 4 + 1).toFixed(2)} MB`,
-  status:
-    Math.random() > 0.7
-      ? "error"
-      : Math.random() > 0.4
-      ? "success"
-      : "uploading",
-}));
-
-export const PhotoGrid: React.FC = () => {
+export const PhotoGrid: React.FC = ({
+  send,
+}: {
+  send: (data: any) => void;
+}) => {
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const {
     selectedIds,
     toggleSelection,
     clearSelection,
     isSelected,
     selectAll,
-  } = useSelection(mockPhotos);
+  } = useSelection(photos);
 
-  const sendConfigToServer = async (folderPath: string) => {
-    console.log("Enviando para", folderPath);
+  // 🔄 Carrega fotos da API
+  useEffect(() => {
+    const loadPhotos = async () => {
+      try {
+        const res = await fetch("http://bruno-linux:8080/api/thumbs/list");
+        const data = await res.json();
+        setPhotos(data);
+      } catch (err) {
+        console.error("❌ Erro ao carregar thumbs:", err);
+      }
+    };
+
+    loadPhotos();
+  }, []);
+
+  const sendConfigToServer = async (folderPath: string): Promise<string> => {
     try {
-      await fetch("http://bruno-linux:8080/set-config", {
+      const response = await fetch("http://bruno-linux:8080/set-config", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ folder: folderPath }),
       });
       console.log("✅ Configuração enviada com sucesso");
+
+      return response.json();
     } catch (error) {
       console.error("❌ Falha ao enviar config:", error);
     }
   };
 
+  const onCopy = () => {
+    send({
+      type: "action",
+      name: "copy_files",
+      payload: {
+        hashes: Array.from(selectedIds),
+      },
+    });
+  };
+
   return (
     <Stack tokens={{ childrenGap: 10 }} styles={{ root: { padding: 16 } }}>
       <PhotoToolbar
-        photos={mockPhotos}
+        photos={photos}
         selectedIds={selectedIds}
         onClear={clearSelection}
         onSelectAll={selectAll}
         onSelectFolder={sendConfigToServer}
+        onCopy={onCopy}
       />
       <div
         style={{
@@ -59,7 +77,7 @@ export const PhotoGrid: React.FC = () => {
           justifyContent: "flex-start",
         }}
       >
-        {mockPhotos.map((photo) => (
+        {photos.map((photo) => (
           <PhotoItem
             key={photo.id}
             photo={photo}
@@ -68,7 +86,7 @@ export const PhotoGrid: React.FC = () => {
           />
         ))}
       </div>
-      {mockPhotos.length === 0 && <Text>Sem fotos para exibir.</Text>}
+      {photos.length === 0 && <Text>Sem fotos para exibir.</Text>}
     </Stack>
   );
 };

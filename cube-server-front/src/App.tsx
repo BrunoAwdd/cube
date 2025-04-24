@@ -1,24 +1,26 @@
+import React, { useState } from "react";
 import { FluentProvider, webLightTheme } from "@fluentui/react-components";
-import { PhotoGrid } from "./PhotoGrid";
 import { QrCodePanel } from "./qr/qrCodePanel";
-import { useState } from "react";
+import { PhotoGrid } from "./PhotoGrid";
 import { useWebSocket } from "./hooks/useWebSocket";
-
-const SERVER_URL = "bruno-linux:8080"; // ou localhost
+import { ConnectionStatus } from "./components/ConnectionStatus";
 
 const App = () => {
   const [token, setToken] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(false);
 
-  useWebSocket((receivedToken) => {
-    setToken(receivedToken);
+  const { send } = useWebSocket({
+    onTokenReceived: setToken,
+    onStatusChange: setIsOnline,
   });
 
   return (
     <FluentProvider
       theme={webLightTheme}
-      style={{ height: "100vh", padding: 24 }}
+      style={{ height: "100vh", padding: 24, position: "relative" }}
     >
-      {!token ? <QrCodePanel /> : <PhotoGrid />}
+      <ConnectionStatus online={isOnline} />
+      {!token ? <QrCodePanel /> : <PhotoGrid send={send} />}
     </FluentProvider>
   );
 };

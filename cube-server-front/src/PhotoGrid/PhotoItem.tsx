@@ -84,7 +84,7 @@ export const PhotoItem: React.FC<Props> = ({ photo, selected, onClick }) => {
         }`}
       >
         <Image
-          src={photo.url}
+          src={`http://bruno-linux:8080${photo.url}`}
           width={120}
           height={120}
           imageFit={ImageFit.cover}

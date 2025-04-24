@@ -1,18 +1,17 @@
 use axum::{
-    extract::{State},
-    http::{HeaderMap},
-    body::Body,
+    body::{to_bytes, Body},
+    extract::{ws::Message, State},
+    http::HeaderMap,
+    response::IntoResponse,
 };
-use axum::response::IntoResponse;
 use axum::debug_handler;
 use std::{sync::Arc};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
-use axum::body::to_bytes;
 use rusqlite::params;
 
 use crate::state::AppState;
-use crate::utils::{path::get_output_path, file::save_file, hash::compute_hash};
+use crate::utils::{file::save_file, hash::compute_hash, path::get_output_path};
 
 #[debug_handler]
 pub async fn upload_raw_handler(
@@ -32,7 +31,6 @@ pub async fn upload_raw_handler(
         .map(|s| s.to_string())
         .unwrap_or_else(|| format!("{}_upload", Uuid::new_v4()));
 
-
     let modified_at = headers
         .get("X-Modified-At")
         .and_then(|v| v.to_str().ok())
@@ -40,7 +38,7 @@ pub async fn upload_raw_handler(
         .map(|dt| dt.with_timezone(&Utc));
 
     let data = match to_bytes(body, usize::MAX).await {
-        Ok(bytes) => bytes.to_vec(), // ← agora é Vec<u8>
+        Ok(bytes) => bytes.to_vec(),
         Err(_) => return "Erro ao ler corpo".to_string(),
     };
 
@@ -56,14 +54,12 @@ pub async fn upload_raw_handler(
         .unwrap_or(false);
 
     if exists {
-        println!("Arquivo já existente: {}", filename);
+        println!("📦 Arquivo já existente: {}", filename);
         return "Arquivo já existente, ignorado.".to_string();
     }
 
     let dir = state.upload_dir.read().await;
     let path = get_output_path(&dir, &username, &filename, modified_at).await;
-
-    println!("modified_at recebido: {:?}", modified_at);
 
     save_file(&path, &data).await;
 
@@ -73,6 +69,20 @@ pub async fn upload_raw_handler(
     )
     .unwrap();
 
-    println!("Recebido e salvo: {}", path.to_string_lossy());
+    println!("✅ Recebido e salvo: {}", path.to_string_lossy());
+
+    // Enviar confirmação via WebSocket para o desktop
+    let confirmation = serde_json::json!({
+        "event": "copied",
+        "hash": hash,
+        "status": "success",
+        "path": path.to_string_lossy(),
+    });
+
+    let clients = state.ws_state.lock().await;
+    for client in clients.iter() {
+        let _ = client.send(Message::Text(confirmation.to_string()));
+    }
+
     "Upload finalizado!".to_string()
 }

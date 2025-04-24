@@ -7,7 +7,8 @@ interface PhotoToolbarProps {
   selectedIds: Set<string>;
   onClear: () => void;
   onSelectAll: () => void;
-  onSelectFolder: (folder: string) => string;
+  onSelectFolder: (folder: string) => Promise<string>;
+  onCopy: () => void;
 }
 
 export const PhotoToolbar: React.FC<PhotoToolbarProps> = ({
@@ -16,12 +17,8 @@ export const PhotoToolbar: React.FC<PhotoToolbarProps> = ({
   onClear,
   onSelectAll,
   onSelectFolder,
+  onCopy,
 }) => {
-  const onCopy = () => {
-    const selected = photos.filter((p) => selectedIds.has(p.id));
-    navigator.clipboard.writeText(selected.map((p) => p.url).join("\n"));
-  };
-
   const itemStyles = {
     root: {
       backgroundColor: "#f9fafe",
