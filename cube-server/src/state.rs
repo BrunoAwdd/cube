@@ -8,5 +8,5 @@ use crate::ws::Clients;
 pub struct AppState {
     pub upload_dir: Arc<RwLock<String>>,
     pub db: Arc<Mutex<Connection>>,
-    pub ws_state: Clients, // ← adicione este campo
+    pub ws_state: Clients,
 }
