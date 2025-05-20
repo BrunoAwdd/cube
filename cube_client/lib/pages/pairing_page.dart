@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PairingPage extends StatefulWidget {
@@ -12,7 +12,6 @@ class PairingPage extends StatefulWidget {
 }
 
 class _PairingPageState extends State<PairingPage> {
-  final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   final TextEditingController manualController = TextEditingController(
     text: 'http://bruno-linux:8080?code=ABC123',
   );
@@ -55,7 +54,6 @@ class _PairingPageState extends State<PairingPage> {
 
   Future<void> _processLink(String link) async {
     try {
-      // Garante que o link tenha http://
       if (!link.startsWith("http")) {
         link = "http://$link";
       }
@@ -63,10 +61,6 @@ class _PairingPageState extends State<PairingPage> {
       final uri = Uri.parse(link);
       final code = uri.queryParameters['code'];
       final ip = uri.host;
-
-      print("Uri: $uri");
-      print("Code: $code");
-      print("Ip: $ip");
 
       if (ip.isEmpty) throw "Link inválido";
       if (code == null) throw "Code inválido";
@@ -81,13 +75,15 @@ class _PairingPageState extends State<PairingPage> {
     }
   }
 
-  void _onQRViewCreated(QRViewController controller) {
-    controller.scannedDataStream.listen((scanData) async {
-      if (_scanned) return;
-      _scanned = true;
+  void _onDetect(BarcodeCapture capture) async {
+    if (_scanned) return;
+    final barcode = capture.barcodes.first;
+    final code = barcode.rawValue;
 
-      await _processLink(scanData.code ?? '');
-    });
+    if (code != null) {
+      _scanned = true;
+      await _processLink(code);
+    }
   }
 
   @override
@@ -118,9 +114,9 @@ class _PairingPageState extends State<PairingPage> {
             ),
           ),
           Expanded(
-            child: QRView(
-              key: qrKey,
-              onQRViewCreated: _onQRViewCreated,
+            child: MobileScanner(
+              controller: MobileScannerController(),
+              onDetect: _onDetect,
             ),
           ),
         ],
