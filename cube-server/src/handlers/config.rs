@@ -1,35 +1,78 @@
+/// # Configuration Handler
+///
+/// This module provides an endpoint to set or update the upload directory used by the server.
+///
+/// ## Endpoint
+/// - **set_config_handler**: Receives an optional upload directory path. If not provided, generates a default path based on the current year and month. Ensures the directory exists and updates the global application state.
+///
+/// ## Structures
+/// - `ConfigPayload`: Payload for configuration (optional `upload_dir`).
+
 use axum::{extract::State, Json};
 use serde::Deserialize;
 use std::{sync::Arc, path::PathBuf};
 use chrono::Utc;
 use chrono::Datelike;
+use dirs::data_dir;
+use whoami;
 
 use crate::state::AppState;
 
+/// Payload for configuration requests.
+/// If `upload_dir` is not provided, a default directory is generated.
 #[derive(Deserialize)]
 pub struct ConfigPayload {
     upload_dir: Option<String>,
 }
 
+/// Sets the upload directory for the server.
+///
+/// # Flow
+/// - Uses the provided directory or generates a default one based on the current year and month.
+/// - Creates the directory if it does not exist.
+/// - Updates the global application state with the new directory.
+/// - Returns a message indicating the result.
+///
+/// # Returns
+/// A string message indicating success or failure.
 pub async fn set_config_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<ConfigPayload>,
 ) -> String {
-    // Usa o valor fornecido ou gera o padrão
-    let new_dir = payload.upload_dir.unwrap_or_else(|| {
-        let now = Utc::now();
-        format!("Imagens/bruno/{}/{}", now.year(), format!("{:02}", now.month()))
-    });
+    // Diretório interno fixo
+    let internal_dir = dirs::data_local_dir()
+        .unwrap_or_else(|| PathBuf::from("C:\\Temp"))
+        .join("Cube")
+        .join(whoami::username())
+        .join("dcim");
 
-    // Cria o diretório, se necessário
-    let path = PathBuf::from(&new_dir);
-    if let Err(e) = tokio::fs::create_dir_all(&path).await {
-        return format!("❌ Erro ao criar diretório {}: {}", new_dir, e);
+    if let Err(e) = tokio::fs::create_dir_all(&internal_dir).await {
+        return format!("❌ Error creating internal directory: {}", e);
+    }
+
+    // Diretório de exportação configurável
+    let export_dir = payload
+        .upload_dir
+        .clone()
+        .unwrap_or_else(|| "C:\\Export".to_string());
+
+    if let Err(e) = tokio::fs::create_dir_all(&export_dir).await {
+        return format!("❌ Error creating export directory: {}", e);
     }
 
     // Atualiza o estado global
-    let mut dir = state.upload_dir.write().await;
-    *dir = new_dir.clone();
+    {
+        let mut dir = state.upload_dir.write().await;
+        *dir = internal_dir.to_string_lossy().to_string();
+    }
+    {
+        let mut export = state.upload_dir.write().await;
+        *export = export_dir.clone();
+    }
 
-    format!("📂 Diretório de upload definido para: {}", new_dir)
+    format!(
+        "📂 Internal directory: {}\n📤 Export directory: {}",
+        internal_dir.to_string_lossy(),
+        export_dir
+    )
 }

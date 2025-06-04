@@ -1,3 +1,19 @@
+//! # RAW Upload Handler
+//!
+//! This module provides an endpoint for uploading RAW files to the server.
+//!
+//! ## Endpoint
+//! - **upload_raw_handler**: Receives a file upload (with metadata in headers), saves it to disk, updates the database, and notifies connected WebSocket clients.
+//!
+//! ## Flow
+//! 1. Extracts username, filename, and modification date from HTTP headers.
+//! 2. Reads the file body and computes its hash.
+//! 3. Checks if the file (by hash) already exists in the database; if so, ignores the upload.
+//! 4. Determines the output path based on user and date, and saves the file.
+//! 5. Inserts the file metadata into the database.
+//! 6. Notifies all connected WebSocket clients about the new upload.
+//! 7. Returns a success message.
+
 use axum::{
     body::{to_bytes, Body},
     extract::{ws::Message, State},
@@ -13,6 +29,15 @@ use rusqlite::params;
 use crate::state::AppState;
 use crate::utils::{file::save_file, hash::compute_hash, path::get_output_path};
 
+/// Handles RAW file uploads.
+///
+/// # Flow
+/// - Extracts metadata from headers.
+/// - Reads and saves the file.
+/// - Checks for duplicates by hash.
+/// - Updates the database.
+/// - Notifies WebSocket clients.
+/// - Returns a status message.
 #[debug_handler]
 pub async fn upload_raw_handler(
     State(state): State<Arc<AppState>>,
@@ -39,7 +64,7 @@ pub async fn upload_raw_handler(
 
     let data = match to_bytes(body, usize::MAX).await {
         Ok(bytes) => bytes.to_vec(),
-        Err(_) => return "Erro ao ler corpo".to_string(),
+        Err(_) => return "Error reading file".to_string(),
     };
 
     let hash = compute_hash(&data);
@@ -54,8 +79,8 @@ pub async fn upload_raw_handler(
         .unwrap_or(false);
 
     if exists {
-        println!("📦 Arquivo já existente: {}", filename);
-        return "Arquivo já existente, ignorado.".to_string();
+        println!("📦 File {} already exists", hash);
+        return "The file already exists".to_string();
     }
 
     let dir = state.upload_dir.read().await;
@@ -69,9 +94,9 @@ pub async fn upload_raw_handler(
     )
     .unwrap();
 
-    println!("✅ Recebido e salvo: {}", path.to_string_lossy());
+    println!("✅ Received and Saved: {}", path.to_string_lossy());
 
-    // Enviar confirmação via WebSocket para o desktop
+    // Send notification to WebSocket clients
     let confirmation = serde_json::json!({
         "event": "copied",
         "hash": hash,
@@ -84,5 +109,5 @@ pub async fn upload_raw_handler(
         let _ = client.send(Message::Text(confirmation.to_string()));
     }
 
-    "Upload finalizado!".to_string()
+    "Upload Ended!".to_string()
 }

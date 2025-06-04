@@ -1,3 +1,15 @@
+//! # Thumbnails Handler
+//!
+//! This module provides endpoints for uploading and listing photo thumbnails.
+//!
+//! ## Endpoints
+//! - **upload_thumbs_handler**: Receives a list of thumbnails in base64, saves them to disk, and updates the database.
+//! - **list_thumbs_handler**: Lists all thumbnails available in the `.thumbs` directory, returning their metadata.
+//!
+//! ## Structures
+//! - `ThumbPayload`: Payload for uploading a thumbnail (id, name, size, hash, status, thumb_base64, modified_at).
+//! - `Photo`: Metadata returned when listing thumbnails (id, url, name, size, status).
+
 use axum::{extract::{State, Json}, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use base64::{engine::general_purpose, Engine};
@@ -8,6 +20,7 @@ use std::path::Path;
 
 use crate::state::AppState;
 
+/// Payload for uploading a thumbnail.
 #[derive(Deserialize)]
 pub struct ThumbPayload {
     id: String,
@@ -19,6 +32,7 @@ pub struct ThumbPayload {
     modified_at: Option<DateTime<chrono::Utc>>,
 }
 
+/// Metadata for a photo thumbnail.
 #[derive(Serialize)]
 pub struct Photo {
     pub id: String,
@@ -28,6 +42,13 @@ pub struct Photo {
     pub status: String,
 }
 
+/// Receives a list of thumbnails, saves them to disk, and updates the database.
+///
+/// # Flow
+/// - Ensures the `.thumbs` directory exists.
+/// - Decodes each thumbnail from base64 and saves it as a JPEG file.
+/// - Inserts or updates the thumbnail metadata in the database.
+/// - Returns a success message.
 pub async fn upload_thumbs_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<Vec<ThumbPayload>>,
@@ -40,12 +61,12 @@ pub async fn upload_thumbs_handler(
     }
 
     let mut db = state.db.lock().await;
-    let tx = db.transaction().unwrap();
+    let tx = db.transaction().expect("Failed to create transaction");
 
     for item in payload {
         let file_path = thumb_dir.join(format!("{}.jpg", item.hash));
 
-        // Salvar o thumbnail no disco
+        // Save thumbnail to disk
         if let Ok(bytes) = general_purpose::STANDARD.decode(&item.thumb_base64) {
             if let Err(e) = fs::write(&file_path, bytes) {
                 eprintln!("Erro ao salvar thumb {}: {e}", file_path.display());
@@ -53,17 +74,23 @@ pub async fn upload_thumbs_handler(
             }
         }
 
-        // Inserir ou atualizar no banco de dados
+        // Insert on database
         tx.execute(
             "INSERT OR REPLACE INTO uploads (hash, filename, size) VALUES (?1, ?2, ?3)",
             [&item.hash, &item.name, &item.size],
-        ).unwrap();
+        ).expect("Failed to insert or update file in database");
     }
 
-    tx.commit().unwrap();
+    tx.commit().expect("Failed to commit transaction");
     "Thumbs recebidos e processados com sucesso".to_string()
 }
 
+/// Lists all thumbnails available in the `.thumbs` directory.
+///
+/// # Flow
+/// - Reads thumbnail metadata from the database.
+/// - Checks if the corresponding JPEG file exists in `.thumbs`.
+/// - Returns a list of `Photo` objects as JSON.
 pub async fn list_thumbs_handler(
     State(state): State<Arc<AppState>>,
 ) -> Json<Vec<Photo>> {
@@ -79,10 +106,10 @@ pub async fn list_thumbs_handler(
         .query_map([], |row| {
             let hash: String = row.get(0)?;
             let filename: String = row.get(1)?;
-            let size: String = row.get(2)?; // ← capturando o tamanho real da foto
+            let size: String = row.get(2)?;
             Ok((hash, filename, size))
         })
-        .unwrap();
+        .expect("Failed to query uploads");
 
     for row in rows.flatten() {
         let (hash, filename, size) = row;
@@ -93,8 +120,8 @@ pub async fn list_thumbs_handler(
                 id: hash.clone(),
                 url: format!("/thumbs/{}.jpg", hash),
                 name: filename,
-                size, // ← agora o tamanho correto vindo do Flutter
-                status: "uploading".to_string(), // ← pode ajustar futuramente
+                size,
+                status: "uploading".to_string(),
             });
         }
     }

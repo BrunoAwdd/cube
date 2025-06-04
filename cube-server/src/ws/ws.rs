@@ -1,13 +1,29 @@
+//! # WebSocket Handler
+//!
+//! This module provides WebSocket support for real-time communication between the server and clients.
+//!
+//! ## Features
+//! - Accepts WebSocket connections and manages a list of connected clients.
+//! - Allows broadcasting JSON messages to all connected clients.
+//! - Handles incoming messages and dispatches actions based on their content (e.g., "copy_files").
+//!
+//! ## Main Functions
+//! - `ws_handler`: Axum handler to upgrade HTTP requests to WebSocket connections.
+//! - `handle_socket`: Manages the lifecycle of a WebSocket connection, including receiving and sending messages.
+//! - `broadcast_json`: Broadcasts a JSON message to all connected clients.
+
 use crate::state::AppState;
 use axum::extract::ws::{Message, WebSocketUpgrade, WebSocket};
-use axum::{extract::State, response::IntoResponse, routing::get, Router};
+use axum::{extract::State, response::IntoResponse};
 use std::sync::Arc;
 use futures_util::{StreamExt, SinkExt};
 use tokio::sync::{Mutex, mpsc::UnboundedSender};
 use serde_json::Value;
 
+/// Type alias for the list of connected WebSocket clients.
 pub type Clients = Arc<Mutex<Vec<UnboundedSender<Message>>>>;
 
+/// Axum handler to upgrade HTTP requests to WebSocket connections.
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
     State(state): State<Arc<AppState>>,
@@ -15,23 +31,29 @@ pub async fn ws_handler(
     ws.on_upgrade(move |socket| handle_socket(socket, state))
 }
 
+/// Handles the lifecycle of a WebSocket connection.
+///
+/// - Adds the client to the global client list.
+/// - Spawns a task to send messages to the client.
+/// - Listens for incoming messages and dispatches actions.
+/// - Removes the client on disconnect.
 async fn handle_socket(stream: WebSocket, state: Arc<AppState>) {
     let (mut sender, mut receiver) = stream.split();
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Message>();
 
-    // Adiciona esse cliente na lista
+    // Add this client to the list
     state.ws_state.lock().await.push(tx.clone());
 
-    // Task para enviar mensagens para esse socket
+    // Task to send messages to this socket
     tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
             let _ = sender.send(msg).await;
         }
     });
 
-    // Loop para escutar o que chega desse socket
+    // Listen for incoming messages from this socket
     while let Some(Ok(Message::Text(text))) = receiver.next().await {
-        println!("📩 WS recebeu: {}", text);
+        println!("📩 WS received: {}", text);
 
         match serde_json::from_str::<Value>(&text) {
             Ok(payload) => {
@@ -48,26 +70,28 @@ async fn handle_socket(stream: WebSocket, state: Arc<AppState>) {
                                             "hash": h
                                         });
 
-                                        println!("⬇️ Enviando download para {}", h);
+                                        println!("⬇️ Sending download for {}", h);
                                         broadcast_json(&clients, &request);
                                     }
                                 }
                             }
                         }
 
-                        _ => println!("⚠️ Ação desconhecida: {}", action),
+                        _ => println!("⚠️ Unknown action: {}", action),
                     }
                 }
 
             }
             Err(err) => {
-                println!("❌ Erro ao decodificar JSON do WS: {err}");
+                println!("❌ Error decoding WS JSON: {err}");
             }
         }
     }
 
-    println!("🔌 WS desconectado");
+    println!("🔌 WS disconnected");
 }
+
+/// Broadcasts a JSON message to all connected clients.
 fn broadcast_json(clients: &[UnboundedSender<Message>], json: &Value) {
     let msg = Message::Text(json.to_string());
     for client in clients.iter() {
