@@ -1,0 +1,61 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "frontend",
+  "version": "0.1.0",
+  "identifier": "com.frontend.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "plugins": {
+    "sql": {
+      "allow-load": true,
+      "default": ["sqlite:uploads.db"]
+    }
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "frontend",
+        "width": 800,
+        "height": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [
+      ".\\libs\\CubeMirror.dll",
+      ".\\libs\\DokanNet.dll",
+      ".\\libs\\LTRData.Extensions.dll",
+      ".\\libs\\LTRData.Extensions.Native.dll",
+      ".\\libs\\Microsoft.Bcl.AsyncInterfaces.dll",
+      ".\\libs\\Microsoft.Bcl.HashCode.dll",
+      ".\\libs\\System.Buffers.dll",
+      ".\\libs\\System.IO.FileSystem.AccessControl.dll",
+      ".\\libs\\System.IO.Pipelines.dll",
+      ".\\libs\\System.Memory.dll",
+      ".\\libs\\System.Numerics.Vectors.dll",
+      ".\\libs\\System.Runtime.CompilerServices.Unsafe.dll",
+      ".\\libs\\System.Security.AccessControl.dll",
+      ".\\libs\\System.Security.Principal.Windows.dll",
+      ".\\libs\\System.Text.Encodings.Web.dll",
+      ".\\libs\\System.Text.Json.dll",
+      ".\\libs\\System.Threading.Tasks.Extensions.dll",
+      ".\\libs\\System.ValueTuple.dll"
+    ]
+  }
+}
